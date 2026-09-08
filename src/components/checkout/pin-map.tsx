@@ -45,6 +45,39 @@ export interface PinMapCity {
 /** Close enough to a house that the courier does not have to guess which one. */
 const PIN_ZOOM = 16;
 
+/**
+ * Whether this browser can draw a map at all.
+ *
+ * MapLibre needs WebGL2, and WebGL2 is not everywhere: Firefox refuses it on
+ * any machine whose GPU it does not trust, which covers headless CI, virtual
+ * machines, locked-down builds and a long tail of older hardware. Asked to
+ * build a map there, MapLibre fires `GPUInitializationError` from inside its
+ * own constructor — before a caller can attach an `error` listener — and
+ * returns a map with no painter, which never fires `load`.
+ *
+ * That silence used to reach much further than a blank rectangle. The checkout
+ * waits for the map to say where its pin is before it asks for a quote, rather
+ * than pricing a delivery against the city the customer just switched away
+ * from. With no pin the quote was never requested at all: the summary sat at
+ * the subtotal with no delivery and no total, the submit button stayed
+ * disabled, and nothing on screen explained why, because as far as the screen
+ * knew it was still waiting. The customer simply could not order.
+ *
+ * So the question is asked first, and asked the same way MapLibre asks it. The
+ * context is released immediately — browsers cap how many may be live, and this
+ * one exists only to answer yes or no.
+ */
+function canRenderMap(): boolean {
+  try {
+    const gl = document.createElement('canvas').getContext('webgl2');
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    return gl !== null;
+  } catch {
+    // Some hardened builds throw rather than return null. Same answer.
+    return false;
+  }
+}
+
 export function PinMap({
   city,
   zones,
@@ -139,6 +172,23 @@ export function PinMap({
       */
       const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
       const start = initialPointRef.current;
+
+      /*
+        Where the camera is about to be pointed, and — when there is no camera —
+        where the form is told the pin is anyway.
+
+        Reporting it is not a guess or a degraded answer: it is the same
+        coordinate `load` reports a moment later on a browser that can draw,
+        because it is the centre the map is about to be built on. What a
+        customer loses without a map is the ability to *adjust* the pin; the
+        courier still gets the street address and the landmark they typed.
+      */
+      const fallbackPoint = start ?? { lat: city.center.lat, lng: city.center.lng };
+
+      if (!canRenderMap()) {
+        onChangeRef.current(fallbackPoint);
+        return;
+      }
 
       const map = new maplibre.Map({
         container: containerRef.current,

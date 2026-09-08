@@ -149,8 +149,7 @@ listing what is not wired up, and a disabled checkout button.
 
 ## Deploying the preview
 
-The repository is private. On Vercel, import it and set exactly one environment
-variable:
+On Vercel, import the repository and set exactly one environment variable:
 
 ```
 NEXT_PUBLIC_DEMO_MODE = 1
