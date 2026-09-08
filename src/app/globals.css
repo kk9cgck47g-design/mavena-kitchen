@@ -1,0 +1,412 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* =============================================================================
+   Mavena Kitchen — design system
+   -----------------------------------------------------------------------------
+   Charcoal and lime. A near-black, warm-tinted canvas so food photography is the
+   only source of colour on the page, and exactly one accent.
+
+   The site is DARK ONLY, deliberately. This is a burger joint that trades in the
+   evening; a light theme would mean two sets of photography treatments, two
+   shadow systems and a diluted identity. Committing to one is what makes it look
+   designed rather than generated.
+
+   Rules that keep it disciplined:
+     1. Lime means "actionable" or "available". Nothing decorative is ever lime.
+     2. Elevation comes from warmer surfaces + soft shadow, never from borders alone.
+     3. Every warm tone on screen should come from a photograph.
+   ========================================================================== */
+
+@theme {
+  /* --- Breakpoints ------------------------------------------------------
+     One extra stop below Tailwind's `sm`. Between 320 and 375 px the header
+     has to give something up — at 375 the logo, the demo chip and the two
+     round buttons together want more room than the viewport has, and the
+     menu button was the one that fell off the edge. `xs` is where the
+     wordmark steps down a size; every phone at 376 px and wider (iPhone 12
+     onwards) is unaffected. */
+  --breakpoint-xs: 23.5rem;
+
+  /* --- Lime -------------------------------------------------------------
+     Taken from the logo's green ring, then raised in luminance and chroma so
+     it holds contrast on near-black. Print keeps the original green. */
+  --color-lime-50: oklch(0.97 0.04 132);
+  --color-lime-100: oklch(0.94 0.08 132);
+  --color-lime-200: oklch(0.9 0.13 133);
+  --color-lime-300: oklch(0.86 0.17 134);
+  --color-lime-400: oklch(0.82 0.2 135);
+  --color-lime-500: oklch(0.77 0.21 136);
+  --color-lime-600: oklch(0.68 0.19 137);
+  --color-lime-700: oklch(0.57 0.16 138);
+  --color-lime-800: oklch(0.45 0.12 139);
+  --color-lime-900: oklch(0.35 0.09 140);
+  --color-lime-950: oklch(0.24 0.06 141);
+
+  /* --- Coal -------------------------------------------------------------
+     Warm-tinted greys. The slight hue keeps it reading as charred grill rather
+     than cold slate; pure neutral greys look like a developer tool. */
+  --color-coal-50: oklch(0.97 0.004 80);
+  --color-coal-100: oklch(0.92 0.005 78);
+  --color-coal-200: oklch(0.84 0.006 76);
+  --color-coal-300: oklch(0.72 0.007 74);
+  --color-coal-400: oklch(0.6 0.008 72);
+  --color-coal-500: oklch(0.49 0.009 70);
+  --color-coal-600: oklch(0.39 0.01 68);
+  --color-coal-700: oklch(0.3 0.01 66);
+  --color-coal-800: oklch(0.23 0.009 64);
+  --color-coal-850: oklch(0.19 0.008 62);
+  --color-coal-900: oklch(0.16 0.007 60);
+  --color-coal-950: oklch(0.12 0.006 58);
+  --color-coal-1000: oklch(0.09 0.005 56);
+
+  /* --- Type -------------------------------------------------------------
+     Family names are written out rather than using var(--font-*), because those
+     expand to include a metric-matched fallback declaring unicode-range
+     U+0-10FFFF — a catch-all that intercepts every script before the next real
+     family is consulted. See the note in [locale]/layout.tsx. */
+  --font-sans: 'Google Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: Archivo, 'Google Sans', ui-sans-serif, sans-serif;
+
+  --text-display: clamp(2.75rem, 9vw, 7rem);
+  --text-display--line-height: 0.92;
+  --text-display--letter-spacing: -0.035em;
+
+  --text-hero: clamp(2rem, 5.5vw, 4rem);
+  --text-hero--line-height: 1.02;
+  --text-hero--letter-spacing: -0.03em;
+
+  --text-section: clamp(1.75rem, 3.5vw, 2.75rem);
+  --text-section--line-height: 1.08;
+  --text-section--letter-spacing: -0.025em;
+
+  /* --- Shape ------------------------------------------------------------ */
+  --radius: 0.875rem;
+  --radius-card: 1.5rem;
+  --radius-sheet: 1.75rem;
+
+  /* --- Elevation --------------------------------------------------------
+     Warm-tinted and wide rather than dark and tight. On a near-black canvas a
+     neutral black shadow is invisible; these read as depth. */
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.4), 0 12px 32px -12px oklch(0 0 0 / 0.6);
+  --shadow-lift: 0 2px 4px oklch(0 0 0 / 0.4), 0 24px 56px -16px oklch(0 0 0 / 0.7);
+  --shadow-sheet: 0 -8px 64px -12px oklch(0 0 0 / 0.8);
+  --shadow-lime: 0 8px 32px -8px oklch(0.77 0.21 136 / 0.45);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+:root {
+  color-scheme: dark;
+
+  --background: var(--color-coal-1000);
+  --foreground: var(--color-coal-50);
+
+  --card: var(--color-coal-900);
+  --card-foreground: var(--color-coal-50);
+  --elevated: var(--color-coal-850);
+
+  --popover: var(--color-coal-850);
+  --popover-foreground: var(--color-coal-50);
+
+  --primary: var(--color-lime-500);
+  /*
+    Deep enough to clear 4.5:1 against the lime it always sits on. The badge
+    text is 10.4px bold, which axe scores against the 4.5 threshold rather than
+    the 3:1 large-text one, and the previous value measured 4.46 — close enough
+    to read fine and still a failure, which is exactly the kind of near-miss
+    that survives a human review and not an automated one.
+  */
+  --primary-foreground: oklch(0.13 0.03 140);
+
+  --secondary: var(--color-coal-800);
+  --secondary-foreground: var(--color-coal-50);
+
+  --muted: var(--color-coal-850);
+  /*
+    Secondary text: dish descriptions, form hints, the summary's labels.
+
+    Not `--color-coal-400`, which is where this started. Muted has to mean
+    "quieter than the heading", not "harder to read than the guidelines allow",
+    and coal-400 measured 4.26:1 against the card surface — under AA for body
+    text at every size used here. This clears it on the darkest surface the
+    palette puts behind it while staying clearly secondary to `--foreground`.
+  */
+  --muted-foreground: oklch(0.7 0.008 72);
+
+  --accent: var(--color-coal-800);
+  --accent-foreground: var(--color-coal-50);
+
+  --destructive: oklch(0.63 0.21 25);
+  --destructive-foreground: var(--color-coal-50);
+
+  --border: oklch(1 0 0 / 0.09);
+  --input: oklch(1 0 0 / 0.12);
+  --ring: var(--color-lime-500);
+
+  /*
+   * How much vertical space the fixed header occupies, including anything the
+   * device reserves above it — non-zero only when the page is installed to the
+   * home screen and draws under a translucent status bar.
+   *
+   * The category rail sticks directly beneath the header and the menu's
+   * scroll-spy measures its line from the rail's stuck position, so both
+   * follow this automatically. Changing the header height means changing it
+   * here and nowhere else.
+   */
+  --header-height: calc(4rem + env(safe-area-inset-top));
+
+  /*
+   * A constant stand-in for `env(safe-area-inset-bottom)`, for the reserves
+   * that sit in normal flow.
+   *
+   * iOS reports the real inset as zero while Safari's bottom toolbar is up and
+   * as the home indicator's height once it retracts — and it flips between the
+   * two every time that toolbar animates, which is on every change of scroll
+   * direction. A `position: fixed` bar has to follow that: it must hug whatever
+   * the bottom edge currently is. Anything in normal flow must not. The spacer
+   * behind the cart bar, the spacer behind the checkout bar, the dish page's
+   * sticky action bar and the footer's last row all contribute to the height of
+   * the document, so tying them to a value that changes mid-scroll makes the
+   * page grow and shrink under the reader — and at the end of the page the
+   * browser has to clamp the scroll position when it shrinks. That clamp is the
+   * jolt you feel when you reach the bottom on an iPhone.
+   *
+   * 2.125rem is the tallest home indicator iOS reports, so the reserve is
+   * always enough and never moves.
+   */
+  --bottom-inset-reserve: 2.125rem;
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --header-height: calc(4.5rem + env(safe-area-inset-top));
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-elevated: var(--elevated);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.35);
+  --radius-2xl: var(--radius-card);
+  --radius-3xl: var(--radius-sheet);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  /*
+   * No global `scroll-behavior: smooth`. It animates every scroll the browser
+   * performs on its own — restoring the position when the customer closes a
+   * dish and goes back, jumping to a #category anchor on load — which turns an
+   * instant return into a visible slide down the page. The two places that
+   * genuinely want an animated scroll ask for it explicitly, and check the
+   * motion preference when they do; see `prefersReducedMotion`.
+   */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /*
+   * No safe-area padding on the body. It was meant to keep the cart bar clear
+   * of the home indicator, but the bar is fixed and so never saw it; what it
+   * did instead was end the page 34px early on an iPhone, which shortened the
+   * containing block of the dish page's sticky action bar and left a strip of
+   * background under it. Each element that actually touches the bottom edge —
+   * the cart bar, the cart sheet, the dish action bar, the footer — reserves
+   * the inset for itself.
+   */
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--color-lime-500);
+    color: var(--primary-foreground);
+  }
+
+  /* Visible focus, but only for keyboard users — a lime ring on every mouse
+     click would be noise. */
+  :focus-visible {
+    outline: 2px solid var(--color-lime-500);
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-coal-700);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-coal-600);
+    background-clip: content-box;
+  }
+
+  /*
+   * Animation is decoration, never the only carrier of meaning. Respect the OS
+   * setting — vestibular disorders are common and motion sickness is real.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Horizontal scrollers (category rail, image strips) with no visible bar. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /*
+   * Glass. Used in exactly two places — the sticky header and the mobile cart
+   * bar — because those are the only elements that genuinely float over content
+   * moving underneath them. Glass on a static card is decoration pretending to
+   * be depth.
+   */
+  .glass {
+    background: color-mix(in oklab, var(--color-coal-1000) 72%, transparent);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+
+    /*
+     * Its own compositing layer, deliberately. Every use of this class is a
+     * fixed or sticky bar, and a backdrop-filtered fixed element is the one
+     * combination WebKit is known to mis-sample while Safari's browser chrome
+     * animates: the blur keeps reading the backdrop from where the page used to
+     * be, so a ghost of the content underneath appears to sit inside — or just
+     * above — the header for the length of the transition. Promoting the
+     * element up front hands the compositor a layer to move rather than a
+     * filter to re-resolve on every frame of it.
+     *
+     * Safe here because nothing that carries `.glass` has a `position: fixed`
+     * descendant — the sheets and dialogs that would care are portalled to the
+     * body — and a transform on the element itself does not affect how the
+     * element is positioned, only what it contains.
+     */
+    transform: translateZ(0);
+  }
+
+  /* Fine film grain. At 3% it is invisible as texture but stops large dark
+     gradients from banding on cheap phone screens. */
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Fades the bottom of a hero image into the page instead of cutting it off. */
+  .fade-to-bg {
+    -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* =============================================================================
+   Third-party overrides
+   -----------------------------------------------------------------------------
+   Deliberately outside every `@layer`. MapLibre ships its own stylesheet, which
+   the map component imports at runtime, so it lands after this file and is
+   itself unlayered — and unlayered rules beat layered ones no matter how
+   specific the layered selector is. Putting these in `@layer utilities` looks
+   right and does nothing.
+   ========================================================================== */
+
+/* MapLibre's zoom buttons are 29px squares, well under the 44px a thumb needs. */
+.maplibregl-ctrl-group button.maplibregl-ctrl-zoom-in,
+.maplibregl-ctrl-group button.maplibregl-ctrl-zoom-out,
+.maplibregl-ctrl-group button.maplibregl-ctrl-compass {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+/*
+  Sonner draws its description in a colour of its own choosing, which lands at
+  1.75:1 on our surface. The toast names the dish that went into the cart, so it
+  is content rather than chrome and has to be readable.
+
+  Three selectors deep on purpose. Sonner injects its stylesheet at runtime, so
+  it lands after this file; at equal specificity the later rule wins and a
+  two-part selector here would lose. `.cn-toast` is the class the Toaster wrapper
+  puts on every toast.
+*/
+[data-sonner-toaster] .cn-toast [data-description] {
+  color: var(--muted-foreground) !important;
+}
+
+/*
+  MapLibre's attribution is styled for a light basemap — near-white text on a
+  near-white pill — and ours sits over a dark map. It carries the OpenStreetMap
+  credit, which is a licence obligation and therefore not optional to read.
+
+  Doubled class selectors for the same reason as the zoom buttons above: the
+  library's own stylesheet arrives later than this one.
+*/
+.maplibregl-ctrl.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib.maplibregl-compact,
+.maplibregl-ctrl-attrib.maplibregl-compact-show {
+  background-color: var(--color-coal-950) !important;
+}
+
+.maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-inner,
+.maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-inner a,
+.maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-button {
+  color: var(--color-coal-100) !important;
+}
+
+.maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-inner a {
+  text-decoration: underline;
+}

@@ -1,0 +1,27 @@
+# An explicit project name, because the default is the name of whatever
+# directory this file happens to sit in — which prefixes the volume. A worktree
+# or a clone under a different folder name would otherwise get its own empty
+# volume and look like a database that had lost its contents.
+name: mavena-kitchen
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mavena-kitchen-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mavena
+      POSTGRES_PASSWORD: mavena_local_dev
+      POSTGRES_DB: mavena_kitchen
+    ports:
+      - '5432:5432'
+    volumes:
+      - mavena-kitchen-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mavena -d mavena_kitchen']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mavena-kitchen-pgdata:

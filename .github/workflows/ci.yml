@@ -1,0 +1,160 @@
+name: CI
+
+# Every push and every pull request. The integration tests need a real Postgres,
+# which is the reason this file is longer than a lint job: the interesting tests
+# in this repository — the payment lifecycle, the order race, session revocation
+# — are precisely the ones that cannot run against a mock.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push supersedes the first. Nobody needs the results of a commit that
+# has already been replaced, and the runners are not free.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mavena
+          POSTGRES_PASSWORD: mavena_ci
+          POSTGRES_DB: mavena_kitchen
+        ports:
+          - 5432:5432
+        # Without this the first migration races the database's own startup and
+        # fails roughly one run in five, which is worse than failing every time.
+        options: >-
+          --health-cmd "pg_isready -U mavena -d mavena_kitchen"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://mavena:mavena_ci@localhost:5432/mavena_kitchen
+      # Long enough to satisfy the validator, and meaningless: CI signs tokens it
+      # verifies itself within the same run. Nothing here is a secret, which is
+      # the point — a workflow that needed one could not run on a fork's pull
+      # request.
+      AUTH_SECRET: ci-only-not-a-real-secret-0000000000000000
+      # The payment suite needs a provider, and the stub is the one that exists.
+      PAYMENT_PROVIDER: stub
+      # At the job level, not on the seed step, and that placement is the whole
+      # point: the seed writes the owner's password from this and the tests read
+      # the owner's password from this. Scoped to one step, the seed used it and
+      # the tests fell back to the built-in default, so they disagreed about a
+      # password neither of them was wrong about.
+      SEED_ADMIN_PASSWORD: ci-only-not-a-real-password
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations
+        run: pnpm db:migrate
+
+      # Takes SEED_ADMIN_PASSWORD from the job environment above, so the account
+      # it creates is the one the tests expect.
+      - name: Seed
+        run: pnpm db:seed
+
+      - run: pnpm typecheck
+
+      - run: pnpm lint
+
+      - run: pnpm test
+
+      # Last, because it is the slowest and the least likely to be the thing that
+      # broke. A failing type or test should not be waited on behind a build.
+      - run: pnpm build
+
+  # A separate job, and separate on purpose: it needs browsers, it takes minutes
+  # rather than seconds, and a red end-to-end run should not make it harder to
+  # see that types and unit tests are fine. `needs` keeps it from spending a
+  # runner on a commit that does not compile.
+  e2e:
+    needs: check
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mavena
+          POSTGRES_PASSWORD: mavena_ci
+          POSTGRES_DB: mavena_kitchen
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mavena -d mavena_kitchen"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://mavena:mavena_ci@localhost:5432/mavena_kitchen
+      AUTH_SECRET: ci-only-not-a-real-secret-0000000000000000
+      # The pickup flow pays through the stub acquirer, so the provider has to
+      # exist. Nothing here is a secret; see the note in the job above.
+      PAYMENT_PROVIDER: stub
+      SEED_ADMIN_PASSWORD: ci-only-not-a-real-password
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Keyed by the resolved Playwright version: a browser build is tied to it,
+      # and a stale cache is worse than none.
+      - name: Cache browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: Apply migrations
+        run: pnpm db:migrate
+
+      - name: Seed
+        run: pnpm db:seed
+
+      # `globalSetup` opens the restaurant before the server starts and
+      # `globalTeardown` puts the settings back and deletes the orders it made,
+      # so nothing here has to arrange either.
+      - run: pnpm e2e
+
+      # The report is only worth keeping when there is something to look at, and
+      # the traces inside it are what make a failure diagnosable without a rerun.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
